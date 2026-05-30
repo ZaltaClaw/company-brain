@@ -1,0 +1,10 @@
+[project]
+name = "company-brain-api"
+version = "0.1.0"
+description = "FastAPI surface for Company Brain MemoryStore"
+requires-python = ">=3.11"
+dependencies = [
+    "company-brain",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+]
