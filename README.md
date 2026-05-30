@@ -197,6 +197,24 @@ Then:
 cd vendor/supermemory && bun install && bun run dev    # dashboard on :3000
 ```
 
+#### Memory graph viz
+
+The vendored `apps/memory-graph-playground` is wired to render Company Brain's
+local data — no Supermemory cloud account needed. Our FastAPI exposes a
+Supermemory-compatible `POST /v3/documents/documents`, and a runtime patch
+points the playground at `http://localhost:8088` instead of `api.supermemory.ai`.
+
+```bash
+./scripts/run-playground.sh    # opens graph viz on :3004 wired to your local brain
+```
+
+The patch lives at `vendor-patches/memory-graph-playground.patch` and is applied
+at runtime by `scripts/apply-vendor-patches.sh`, so the submodule pointer never
+moves. Override the brain URL with `COMPANY_BRAIN_URL=...` if you run the API
+on a non-default host/port.
+
+![Memory graph](.github/assets/supermemory.jpg)
+
 The `stores/supermemory.py` adapter lets you flip the engine the other way too — keep the Supermemory dashboard pointed at *their* hosted brain and use Company Brain just for governed local ingestion. Either direction works; pick whichever side of the boundary you want to own.
 
 To clone with submodules:

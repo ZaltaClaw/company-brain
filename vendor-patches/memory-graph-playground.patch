@@ -1,0 +1,56 @@
+diff --git a/apps/memory-graph-playground/src/app/api/graph/route.ts b/apps/memory-graph-playground/src/app/api/graph/route.ts
+index c722c625..42642e31 100644
+--- a/apps/memory-graph-playground/src/app/api/graph/route.ts
++++ b/apps/memory-graph-playground/src/app/api/graph/route.ts
+@@ -9,31 +9,30 @@ export async function POST(request: Request) {
+ 			limit = 500,
+ 			sort = "createdAt",
+ 			order = "desc",
++			containerTag,
+ 		} = body
+ 
+-		if (!apiKey) {
+-			return NextResponse.json(
+-				{ error: "API key is required" },
+-				{ status: 400 },
+-			)
++		const baseUrl =
++			process.env.COMPANY_BRAIN_URL ?? "http://localhost:8088"
++
++		const headers: Record<string, string> = {
++			"Content-Type": "application/json",
++		}
++		if (apiKey) {
++			headers.Authorization = `Bearer ${apiKey}`
+ 		}
+ 
+-		const response = await fetch(
+-			"https://api.supermemory.ai/v3/documents/documents",
+-			{
+-				method: "POST",
+-				headers: {
+-					"Content-Type": "application/json",
+-					Authorization: `Bearer ${apiKey}`,
+-				},
+-				body: JSON.stringify({
+-					page,
+-					limit,
+-					sort,
+-					order,
+-				}),
+-			},
+-		)
++		const response = await fetch(`${baseUrl}/v3/documents/documents`, {
++			method: "POST",
++			headers,
++			body: JSON.stringify({
++				page,
++				limit,
++				sort,
++				order,
++				...(containerTag ? { containerTag } : {}),
++			}),
++		})
+ 
+ 		if (!response.ok) {
+ 			const errorData = await response.json().catch(() => ({}))

@@ -65,6 +65,22 @@ class MemoryStore(ABC):
     ) -> list[dict[str, Any]]:
         """List ingested raw documents (parents of chunks/memories)."""
 
+    def list_documents_with_memories(
+        self,
+        *,
+        page: int = 1,
+        limit: int = 500,
+        container_tag: str | None = None,
+        sort: str = "createdAt",
+        order: str = "desc",
+    ) -> tuple[list[dict[str, Any]], int]:
+        """Return (documents, total_count). Each document includes up to 10 of its memories.
+
+        Used by the Supermemory-compatible /v3/documents/documents endpoint that the
+        vendored memory-graph-playground talks to.
+        """
+        raise NotImplementedError
+
     @abstractmethod
     def add_document(
         self,

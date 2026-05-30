@@ -233,6 +233,110 @@ class PostgresStore(MemoryStore):
                 for r in cur.fetchall()
             ]
 
+    def list_documents_with_memories(
+        self,
+        *,
+        page: int = 1,
+        limit: int = 500,
+        container_tag: str | None = None,
+        sort: str = "createdAt",
+        order: str = "desc",
+    ) -> tuple[list[dict[str, Any]], int]:
+        page = max(1, int(page))
+        limit = max(1, min(int(limit), 1000))
+        offset = (page - 1) * limit
+
+        where = ""
+        params: list[Any] = []
+        if container_tag:
+            where = "WHERE container_tag LIKE %s"
+            params.append(container_tag if container_tag.endswith("%") else container_tag + "%")
+
+        sort_col = "created_at" if sort in ("createdAt", "created_at") else "created_at"
+        order_dir = "DESC" if str(order).lower() == "desc" else "ASC"
+
+        with self.pool.connection() as conn, conn.cursor() as cur:
+            cur.execute(f"SELECT COUNT(*) FROM documents {where}", params)
+            total = int(cur.fetchone()[0])
+
+            cur.execute(
+                f"""
+                SELECT id, container_tag, source, source_ref, title, body, metadata, created_at
+                FROM documents
+                {where}
+                ORDER BY {sort_col} {order_dir}
+                LIMIT %s OFFSET %s
+                """,
+                [*params, limit, offset],
+            )
+            doc_rows = cur.fetchall()
+
+            docs: list[dict[str, Any]] = []
+            for row in doc_rows:
+                doc_id, ctag, src, src_ref, title, body, meta, created_at = row
+                meta = meta if isinstance(meta, dict) else json.loads(meta or "{}")
+                created_iso = created_at.isoformat() if created_at else None
+
+                # Pull up to 10 memories joined to this document via source/source_ref.
+                cur.execute(
+                    """
+                    SELECT id, content, fact_type, container_tag, created_at, metadata
+                    FROM memories
+                    WHERE source = %s AND source_ref = %s
+                    ORDER BY created_at DESC
+                    LIMIT 10
+                    """,
+                    (src, src_ref),
+                )
+                mem_rows = cur.fetchall()
+                memories = []
+                for mid, mcontent, ftype, mctag, mcreated, mmeta in mem_rows:
+                    mcreated_iso = mcreated.isoformat() if mcreated else created_iso
+                    memories.append(
+                        {
+                            "id": str(mid),
+                            "content": mcontent,
+                            "isStatic": ftype in ("identity", "preference", "role"),
+                            "spaceId": mctag,
+                            "isLatest": True,
+                            "isForgotten": False,
+                            "forgetAfter": None,
+                            "forgetReason": None,
+                            "version": 1,
+                            "parentMemoryId": None,
+                            "rootMemoryId": None,
+                            "createdAt": mcreated_iso,
+                            "updatedAt": mcreated_iso,
+                        }
+                    )
+
+                # documentType derivation
+                kind = (meta or {}).get("kind")
+                if src == "fabric":
+                    document_type = "fabric_table"
+                elif src == "work":
+                    document_type = kind or "work_item"
+                elif src == "foundry":
+                    document_type = "knowledge_doc"
+                else:
+                    document_type = kind or src
+
+                summary = (body or "")[:200]
+                docs.append(
+                    {
+                        "id": str(doc_id),
+                        "title": title,
+                        "summary": summary,
+                        "documentType": document_type,
+                        "createdAt": created_iso,
+                        "updatedAt": created_iso,
+                        "containerTag": ctag,
+                        "memories": memories,
+                    }
+                )
+
+        return docs, total
+
     def status_by_tag(self) -> list[tuple[str, int, int]]:
         """(container_tag, document_count, memory_count) — used by `status`."""
         with self.pool.connection() as conn, conn.cursor() as cur:
