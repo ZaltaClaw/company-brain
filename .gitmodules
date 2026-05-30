@@ -1,0 +1,3 @@
+[submodule "vendor/supermemory"]
+	path = vendor/supermemory
+	url = https://github.com/supermemoryai/supermemory.git

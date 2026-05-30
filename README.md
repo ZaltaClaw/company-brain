@@ -174,10 +174,37 @@ company-brain/
 │   ├── work_iq/                   # Microsoft Graph (mail, teams, drive, calendar)
 │   └── foundry_iq/                # Azure AI Foundry knowledge indexes
 ├── apps/api/                      # FastAPI HTTP wrapper
+├── vendor/supermemory/            # ⬅ Supermemory dashboard, MCP, browser ext (git submodule)
 ├── scripts/                       # init-db, ingest-all, status
 ├── docker-compose.yml             # pgvector/pgvector:pg16 on :5433
 ├── CLAUDE.md                      # full handoff doc for Claude Code / any agent
 └── README.md
+```
+
+### Supermemory dashboard (vendored)
+
+The upstream [Supermemory](https://github.com/supermemoryai/supermemory) repo is pinned as a **git submodule** at `vendor/supermemory/` so you get their dashboard, MCP server, browser extension, and Raycast extension out of the box.
+
+By default the dashboard points at hosted `api.supermemory.ai`. Flip it at your local Company Brain API by editing `vendor/supermemory/apps/web/.env`:
+
+```bash
+NEXT_PUBLIC_BACKEND_URL=http://localhost:8088     # your local Company Brain
+```
+
+Then:
+
+```bash
+cd vendor/supermemory && bun install && bun run dev    # dashboard on :3000
+```
+
+The `stores/supermemory.py` adapter lets you flip the engine the other way too — keep the Supermemory dashboard pointed at *their* hosted brain and use Company Brain just for governed local ingestion. Either direction works; pick whichever side of the boundary you want to own.
+
+To clone with submodules:
+
+```bash
+git clone --recurse-submodules https://github.com/ZaltaClaw/company-brain.git
+# or if you already cloned:
+git submodule update --init --recursive
 ```
 
 ---
